@@ -1,0 +1,43 @@
+version: "3.7"
+
+services:
+  keycloak:
+    build:
+      context: .
+      args:
+        DATABASE_TYPE: "postgres"
+        DATABASE_URL: ${DATABASE_URL}
+        DATABASE_USERNAME: ${DATABASE_USERNAME}
+        DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+        KEYCLOAK_VERSION: ${KEYCLOAK_VERSION}
+        KEYCLOAK_HOSTNAME: ${KEYCLOAK_HOSTNAME}
+        KEYCLOAK_HTTP_ENABLED: ${KEYCLOAK_HTTP_ENABLED}
+        KEYCLOAK_PROXY: ${KEYCLOAK_PROXY}
+    container_name: ${KEYCLOAK_NAME}
+    environment:
+      - KEYCLOAK_ADMIN
+      - KEYCLOAK_ADMIN_PASSWORD
+    labels:
+      - "traefik.http.routers.${KEYCLOAK_NAME}.rule=Host(`${KEYCLOAK_HOSTNAME}`)"
+      - "traefik.http.routers.${KEYCLOAK_NAME}.entrypoints=web,webSecure"
+      - "traefik.http.routers.${KEYCLOAK_NAME}.service=${KEYCLOAK_NAME}"
+      - "traefik.http.services.${KEYCLOAK_NAME}.loadbalancer.server.port=8080"
+    restart: unless-stopped
+    depends_on:
+      - postgres
+  postgres:
+    image: postgres:${POSTGRES_VERSION}
+    container_name: ${POSTGRES_NAME}
+    environment:
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      - "./postgres:/var/lib/postgresql/data"
+    labels:
+      - "traefik.enable=false"
+    restart: unless-stopped
+
+networks:
+  default:
+    external: true
+    name: internal
